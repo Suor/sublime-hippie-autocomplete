@@ -11,6 +11,7 @@ TODO:
 
 - prefer matching first letters in combined_words
 - prioritize previously chosen completions
+- support multiple cursors
 - prefer words closer to cursor?
 - take into account scope/language word defined vs we are editing
 - obey `word_separators` setting to parse words
