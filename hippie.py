@@ -26,7 +26,7 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
 
         if primer != last_choice:
             lookup_index = 0
-            matching = list(distinct(_matching(words_by_view[self.view], words_global)))
+            matching = ldistinct(_matching(words_by_view[self.view], words_global))
 
         if matching[lookup_index] == primer:
             lookup_index += 1
@@ -40,18 +40,18 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
 class HippieListener(sublime_plugin.EventListener):
     def on_init(self, views):
         for view in views:
-            if view.size() > VIEW_TOO_BIG:
-                continue
-            contents = view.substr(sublime.Region(0, view.size()))
-            words_by_view[view] = words = set(WORD_PATTERN.findall(contents))
-            words_global.update(words)
+            index_view(view)
 
     def on_modified_async(self, view):
-        if view.size() > VIEW_TOO_BIG:
-            returnasd
-        text  = view.substr(sublime.Region(0, view.size()))
-        words_by_view[view] = words = set(WORD_PATTERN.findall(text))
-        words_global.update(words)
+        index_view(view)
+
+
+def index_view(view):
+    if view.size() > VIEW_TOO_BIG:
+        return
+    contents = view.substr(sublime.Region(0, view.size()))
+    words_by_view[view] = words = set(WORD_PATTERN.findall(contents))
+    words_global.update(words)
 
 
 def fuzzyfind(primer, collection, sort_results=True):
@@ -89,10 +89,12 @@ def fuzzyfind(primer, collection, sort_results=True):
         return [z[-1] for z in sorted(suggestions, key=lambda x: x[:2])]
 
 
-def distinct(seq):
+def ldistinct(seq):
     """Iterates over sequence skipping duplicates"""
     seen = set()
+    res = []
     for item in seq:
         if item not in seen:
             seen.add(item)
-            yield item
+            res.append(item)
+    return res
