@@ -1,0 +1,1 @@
+Hit Tab to complete a word, hit Tab again if you don't like the first completion.
