@@ -81,7 +81,7 @@ def fuzzyfind(primer, collection, sort_results=True):
         r = list(regex.finditer(item))
         if r:
             best = min(r, key=lambda x: len(x.group(1)))   # find shortest match
-            suggestions.append((len(best.group(1)), best.start(), item, item))
+            suggestions.append((len(best.group(1)), best.start(), item))
 
     if sort_results:
         return [z[-1] for z in sorted(suggestions)]
