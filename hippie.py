@@ -16,6 +16,9 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         global last_choice, lookup_index, matching
 
+        if words_by_view[self.view] is None:
+            index_view(self.view)
+
         primer_region = self.view.word(self.view.sel()[0])
         primer = self.view.substr(primer_region)
 
@@ -43,7 +46,7 @@ class HippieListener(sublime_plugin.EventListener):
             index_view(view)
 
     def on_modified_async(self, view):
-        index_view(view)
+        words_by_view[view] = None  # Drop cached word set
 
 
 def index_view(view):
