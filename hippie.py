@@ -7,14 +7,14 @@ WORD_PATTERN = re.compile(r'(\w{2,})', re.S)  # Start from words of length 2
 
 words_by_view = {}
 words_global = set()
+last_view = None
 matching = []
-lookup_index = 0
-last_choice = ''
+last_index = 0
 
 
 class HippieWordCompletionCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        global last_choice, lookup_index, matching
+        global last_view, matching, last_index
 
         if words_by_view[self.view] is None:
             index_view(self.view)
@@ -27,17 +27,18 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
                 yield from fuzzyfind(primer, s)
             yield primer  # Always be able to cycle back
 
-        if primer != last_choice:
-            lookup_index = 0
+        if last_view is not self.view or not matching or primer != matching[last_index]:
+            last_view = self.view
             matching = ldistinct(_matching(words_by_view[self.view], words_global))
+            last_index = 0
 
-        if matching[lookup_index] == primer:
-            lookup_index += 1
-        if lookup_index >= len(matching):
-            lookup_index = 0
-        last_choice = matching[lookup_index]
+        if matching[last_index] == primer:
+            last_index += 1
+        if last_index >= len(matching):
+            last_index = 0
 
-        self.view.replace(edit, primer_region, last_choice)
+        print("primer -> choice", primer, matching[last_index])
+        self.view.replace(edit, primer_region, matching[last_index])
 
 
 class HippieListener(sublime_plugin.EventListener):
