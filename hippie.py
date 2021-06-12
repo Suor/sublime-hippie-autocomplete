@@ -1,5 +1,6 @@
 import sublime
 import sublime_plugin
+from collections import deque
 import re
 
 VIEW_TOO_BIG = 1000000
@@ -10,6 +11,7 @@ words_global = set()
 last_view = None
 matching = []
 last_index = 0
+history = deque(maxlen=100)  # global across all views
 
 
 class HippieWordCompletionCommand(sublime_plugin.TextCommand):
@@ -29,7 +31,7 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
 
         if last_view is not self.view or not matching or primer != matching[last_index]:
             last_view = self.view
-            matching = ldistinct(_matching(words_by_view[self.view], words_global))
+            matching = ldistinct(_matching(history, words_by_view[self.view], words_global))
             last_index = 0
 
         if matching[last_index] == primer:
@@ -37,8 +39,13 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
         if last_index >= len(matching):
             last_index = 0
 
-        print("primer -> choice", primer, matching[last_index])
         self.view.replace(edit, primer_region, matching[last_index])
+
+        # If this is not our first choice then remove the last one
+        if last_index and history:
+            history.pop()
+        if matching[last_index] not in history:
+            history.append(matching[last_index])
 
 
 class HippieListener(sublime_plugin.EventListener):
