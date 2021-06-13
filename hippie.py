@@ -39,7 +39,8 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
         if last_index >= len(matching):
             last_index = 0
 
-        self.view.replace(edit, primer_region, matching[last_index])
+        for region in self.view.sel():
+            self.view.replace(edit, self.view.word(region), matching[last_index])
 
         # If this is not our first choice then remove the last one
         if last_index and history:

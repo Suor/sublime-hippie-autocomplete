@@ -5,15 +5,16 @@ Sublime Text 2/3 style auto completion for ST4: cycle through words, do not show
 Features:
 
 - fuzzy search
-- prioritize previously chosen completions
+- supports multiple cursors
+- prioritizes previously chosen completions
 - current view words go before other views words
 
 TODO:
 
 - prefer matching first letters in combined_words
-- support multiple cursors
 - prefer words closer to cursor?
 - take into account scope/language word defined vs we are editing
+- better support for multiple cursors, i.e. if primers differ
 - obey `word_separators` setting to parse words
 - `shift+tab` to cycle back? `backspace` to cancel?
 
