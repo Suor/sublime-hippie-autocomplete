@@ -84,21 +84,35 @@ def fuzzyfind(primer, collection, sort_results=True):
             suggestions narrowed down from `collection` using the `primer`.
     """
     suggestions = []
-    pat = '.*?'.join(map(re.escape, primer))
-    pat = '(?=({0}))'.format(pat)   # lookahead regex to manage overlapping matches
-    regex = re.compile(pat, re.IGNORECASE)
     for item in collection:
-        if item == primer:
-            continue
-        r = list(regex.finditer(item))
-        if r:
-            best = min(r, key=lambda x: len(x.group(1)))   # find shortest match
-            suggestions.append((len(best.group(1)), best.start(), item))
+        if score := fuzzy_score(primer.lower(), item):
+            suggestions.append((score, item))
 
     if sort_results:
         return [z[-1] for z in sorted(suggestions)]
     else:
-        return [z[-1] for z in sorted(suggestions, key=lambda x: x[:2])]
+        return [z[-1] for z in sorted(suggestions, key=lambda x: x[0])]
+
+
+def fuzzy_score(primer, item):
+    start, pos, prev, score = -1, -1, 0, 1
+    item_l = item.lower()
+    for c in primer:
+        pos = item_l.find(c, pos + 1)
+        if pos == -1:
+            return
+        if start == -1:
+            start = pos
+
+        # Update score if not at start of the word
+        if pos > 0:
+            pc = item[pos - 1]
+            if pc in "_-" or pc.isupper() < item[pos].isupper():
+                continue
+        score += pos - prev
+        prev = pos
+
+    return (score, len(item))
 
 
 def ldistinct(seq):

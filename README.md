@@ -6,12 +6,12 @@ Features:
 
 - fuzzy search
 - supports multiple cursors
+- expands abbreviations into combined_words for snake, mixed and camel case
 - prioritizes previously chosen completions
 - current view words go before other views words
 
 TODO:
 
-- prefer matching first letters in combined_words
 - prefer words closer to cursor?
 - take into account scope/language word defined vs we are editing
 - better support for multiple cursors, i.e. if primers differ
