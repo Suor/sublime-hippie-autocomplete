@@ -18,9 +18,6 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         global last_view, matching, last_index
 
-        if words_by_view[self.view] is None:
-            index_view(self.view)
-
         primer_region = self.view.word(self.view.sel()[0])
         primer = self.view.substr(primer_region)
 
@@ -30,6 +27,8 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
             yield primer  # Always be able to cycle back
 
         if last_view is not self.view or not matching or primer != matching[last_index]:
+            if words_by_view[self.view] is None:
+                index_view(self.view)
             last_view = self.view
             matching = ldistinct(_matching(history, words_by_view[self.view], words_global))
             last_index = 0
