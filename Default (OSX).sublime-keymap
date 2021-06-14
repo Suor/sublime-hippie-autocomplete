@@ -4,5 +4,6 @@
         { "key": "has_snippet", "operand": false  },
         { "key": "has_next_field", "operand": false },
         { "key": "preceding_text", "operator": "regex_contains", "operand": "\\w$", "match_all": true },
+        { "key": "text", "operator": "not_regex_contains", "operand": "\\s", "match_all": true },
     ]}
 ]
