@@ -1,13 +1,17 @@
+from collections import defaultdict
+from collections import deque
+from itertools import chain
+import re
+
 import sublime
 import sublime_plugin
-from collections import deque
-import re
+
+flatten = chain.from_iterable
 
 VIEW_TOO_BIG = 1000000
 WORD_PATTERN = re.compile(r'(\w{2,})', re.S)  # Start from words of length 2
 
-words_by_view = {}
-words_global = set()
+words_by_view = defaultdict(dict)  # type: Dict[sublime.Window, Dict[sublime.View, Set(str)]]
 last_view = None
 matching = []
 last_index = 0
@@ -17,6 +21,8 @@ history = deque(maxlen=100)  # global across all views
 class HippieWordCompletionCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         global last_view, matching, last_index
+        window = self.view.window()
+        assert window
 
         primer_region = self.view.word(self.view.sel()[0])
         primer = self.view.substr(primer_region)
@@ -27,10 +33,18 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
             yield primer  # Always be able to cycle back
 
         if last_view is not self.view or not matching or primer != matching[last_index]:
-            if words_by_view[self.view] is None:
+            if self.view not in words_by_view[window]:
                 index_view(self.view)
             last_view = self.view
-            matching = ldistinct(_matching(history, words_by_view[self.view], words_global))
+            matching = ldistinct(_matching(
+                history,
+                words_by_view[window][self.view],
+                (
+                    set(flatten(words_by_view[window].values()))
+                    - words_by_view[window][self.view]
+                )
+            ))
+
             last_index = 0
 
         if matching[last_index] == primer:
@@ -54,15 +68,20 @@ class HippieListener(sublime_plugin.EventListener):
             index_view(view)
 
     def on_modified_async(self, view):
-        words_by_view[view] = None  # Drop cached word set
+        window = view.window()
+        if not window:
+            ...
+        else:
+            words_by_view[window].pop(view, None)  # Drop cached word set
 
 
 def index_view(view):
+    window = view.window()
+    assert window
     if view.size() > VIEW_TOO_BIG:
         return
     contents = view.substr(sublime.Region(0, view.size()))
-    words_by_view[view] = words = set(WORD_PATTERN.findall(contents))
-    words_global.update(words)
+    words_by_view[window][view] = set(WORD_PATTERN.findall(contents))
 
 
 def fuzzyfind(primer, collection, sort_results=True):
