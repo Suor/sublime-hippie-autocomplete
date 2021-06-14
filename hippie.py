@@ -135,8 +135,10 @@ def fuzzy_score(primer, item):
             # no penalty if we matched exactly the next char of a sub-word
             pass
         else:
-            score += abs(pos - prev - 1)
+            score += 2 * abs(pos - prev - 1)
 
+        if score > 5:
+            return
         prev = pos
 
     return (score, len(item))
