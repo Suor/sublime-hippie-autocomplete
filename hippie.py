@@ -113,24 +113,36 @@ def fuzzyfind(primer, collection, sort_results=True):
 
 
 def fuzzy_score(primer, item):
-    start, pos, prev, score = -1, -1, 0, 1
+    start, pos, score = -1, -1, 1
+    len_item = len(item)
     item_l = item.lower()
     for c in primer:
-        pos = item_l.find(c, pos + 1)
+        pos = item_l.find(c)
         if pos == -1:
             return
         if start == -1:
             start = pos
+            if pos == 0:
+                score = -1  # match at the start of the word gets extra points
 
-        # Update score if not at start of the word
-        if pos > 0:
-            pc = item[pos - 1]
-            if pc in "_-" or pc.isupper() < item[pos].isupper():
-                continue
-        score += pos - prev
-        prev = pos
+        if (
+            pos > 0
+            and (pc := item[pos - 1])
+            and (
+                pc in "_-"
+                or pc.isupper() < item[pos].isupper()
+            )
+        ):
+            # no penalty if we matched exactly the next char
+            # or the first char of a sub-word
+            pass
+        else:
+            score += pos
 
-    return (score, len(item))
+        item_l = item_l[pos + 1:]
+        item = item[pos + 1:]
+
+    return (score, len_item)
 
 
 def ldistinct(seq):
