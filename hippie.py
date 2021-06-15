@@ -1,5 +1,4 @@
 from collections import defaultdict
-from collections import deque
 from itertools import chain
 import re
 
@@ -13,14 +12,15 @@ WORD_PATTERN = re.compile(r'(\w{2,})', re.S)  # Start from words of length 2
 
 words_by_view = defaultdict(dict)  # type: Dict[sublime.Window, Dict[sublime.View, Set(str)]]
 last_view = None
+initial_primer = ""
 matching = []
 last_index = 0
-history = deque(maxlen=100)  # global across all views
+history = defaultdict(dict)  # type: Dict[sublime.Window, Dict[str, str]]
 
 
 class HippieWordCompletionCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        global last_view, matching, last_index
+        global last_view, matching, last_index, initial_primer
         window = self.view.window()
         assert window
 
@@ -36,8 +36,13 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
             if self.view not in words_by_view[window]:
                 index_view(self.view)
             last_view = self.view
+            initial_primer = primer
             matching = ldistinct(_matching(
-                history,
+                (
+                    {history[window][initial_primer]}
+                    if initial_primer in history[window]
+                    else set()
+                ),
                 words_by_view[window][self.view],
                 (
                     set(flatten(words_by_view[window].values()))
@@ -55,11 +60,7 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
         for region in self.view.sel():
             self.view.replace(edit, self.view.word(region), matching[last_index])
 
-        # If this is not our first choice then remove the last one
-        if last_index and history:
-            history.pop()
-        if matching[last_index] not in history:
-            history.append(matching[last_index])
+        history[window][initial_primer] = matching[last_index]
 
 
 class HippieListener(sublime_plugin.EventListener):
