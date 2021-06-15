@@ -43,19 +43,19 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
                     if initial_primer in history[window]
                     else set()
                 ),
-                words_by_view[window][self.view],
+                words_by_view[window][self.view] - {initial_primer},
                 (
                     set(flatten(words_by_view[window].values()))
                     - words_by_view[window][self.view]
+                    - {initial_primer}
                 )
             ))
 
             last_index = 0
-
-        if matching[last_index] == primer:
+        else:
             last_index += 1
-        if last_index >= len(matching):
-            last_index = 0
+            if last_index >= len(matching):
+                last_index = 0
 
         for region in self.view.sel():
             self.view.replace(edit, self.view.word(region), matching[last_index])
