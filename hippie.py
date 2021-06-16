@@ -1,6 +1,6 @@
 import sublime
 import sublime_plugin
-from collections import deque
+from collections import defaultdict
 import re
 
 VIEW_TOO_BIG = 1000000
@@ -9,14 +9,17 @@ WORD_PATTERN = re.compile(r'(\w{2,})', re.S)  # Start from words of length 2
 words_by_view = {}
 words_global = set()
 last_view = None
+initial_primer = ""
 matching = []
 last_index = 0
-history = deque(maxlen=100)  # global across all views
+history = defaultdict(dict)  # type: Dict[sublime.Window, Dict[str, str]]
 
 
 class HippieWordCompletionCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        global last_view, matching, last_index
+        global last_view, matching, last_index, initial_primer
+        window = self.view.window()
+        assert window
 
         primer_region = self.view.word(self.view.sel()[0])
         primer = self.view.substr(primer_region)
@@ -30,7 +33,17 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
             if words_by_view[self.view] is None:
                 index_view(self.view)
             last_view = self.view
-            matching = ldistinct(_matching(history, words_by_view[self.view], words_global))
+            initial_primer = primer
+            matching = ldistinct(_matching(
+                (
+                    {history[window][initial_primer]}
+                    if initial_primer in history[window]
+                    else set()
+                ),
+                words_by_view[self.view],
+                words_global
+
+            ))
             last_index = 0
 
         if matching[last_index] == primer:
@@ -41,11 +54,7 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
         for region in self.view.sel():
             self.view.replace(edit, self.view.word(region), matching[last_index])
 
-        # If this is not our first choice then remove the last one
-        if last_index and history:
-            history.pop()
-        if matching[last_index] not in history:
-            history.append(matching[last_index])
+        history[window][initial_primer] = matching[last_index]
 
 
 class HippieListener(sublime_plugin.EventListener):
