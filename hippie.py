@@ -24,26 +24,19 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
         primer_region = self.view.word(self.view.sel()[0])
         primer = self.view.substr(primer_region)
 
-        def _matching(*sets):
-            for s in sets:
-                yield from fuzzyfind(primer, s)
+        def _matching():
             yield primer  # Always be able to cycle back
+            if primer in history[window]:
+                yield history[window][primer]
+            yield from fuzzyfind(primer, words_by_view[self.view])
+            yield from fuzzyfind(primer, words_global)
 
         if last_view is not self.view or not matching or primer != matching[last_index]:
             if words_by_view[self.view] is None:
                 index_view(self.view)
             last_view = self.view
             initial_primer = primer
-            matching = ldistinct(_matching(
-                (
-                    {history[window][initial_primer]}
-                    if initial_primer in history[window]
-                    else set()
-                ),
-                words_by_view[self.view],
-                words_global
-
-            ))
+            matching = ldistinct(_matching())
             last_index = 0
 
         if matching[last_index] == primer:
