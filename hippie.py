@@ -21,7 +21,9 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
         window = self.view.window()
         assert window
 
-        primer_region = self.view.word(self.view.sel()[0])
+        first_sel = self.view.sel()[0]
+        word_region = self.view.word(first_sel)
+        primer_region = sublime.Region(word_region.a, first_sel.end())
         primer = self.view.substr(primer_region)
 
         def _matching():
@@ -33,7 +35,12 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
 
         if last_view is not self.view or not matching or primer != matching[last_index]:
             if words_by_view[self.view] is None:
-                index_view(self.view)
+                word_under_cursor = (
+                    primer
+                    if word_region == primer_region
+                    else self.view.substr(word_region)
+                )
+                index_view(self.view, exclude={word_under_cursor})
             last_view = self.view
             initial_primer = primer
             matching = ldistinct(_matching())
@@ -45,7 +52,11 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
             last_index = 0
 
         for region in self.view.sel():
-            self.view.replace(edit, self.view.word(region), matching[last_index])
+            self.view.replace(
+                edit,
+                sublime.Region(self.view.word(region).a, region.end()),
+                matching[last_index]
+            )
 
         history[window][initial_primer] = matching[last_index]
 
@@ -59,11 +70,12 @@ class HippieListener(sublime_plugin.EventListener):
         words_by_view[view] = None  # Drop cached word set
 
 
-def index_view(view):
+def index_view(view, exclude=set()):
     if view.size() > VIEW_TOO_BIG:
         return
     contents = view.substr(sublime.Region(0, view.size()))
-    words_by_view[view] = words = set(WORD_PATTERN.findall(contents))
+    words = set(WORD_PATTERN.findall(contents)) - exclude
+    words_by_view[view] = words
     words_global.update(words)
 
 
