@@ -21,10 +21,12 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
         window = self.view.window()
         assert window
 
+        def word_start(region):
+            word_region = self.view.word(region)
+            return sublime.Region(word_region.a, region.end())
+
         first_sel = self.view.sel()[0]
-        word_region = self.view.word(first_sel)
-        primer_region = sublime.Region(word_region.a, first_sel.end())
-        primer = self.view.substr(primer_region)
+        primer = self.view.substr(word_start(first_sel))
 
         def _matching():
             yield primer  # Always be able to cycle back
@@ -35,12 +37,7 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
 
         if last_view is not self.view or not matching or primer != matching[last_index]:
             if words_by_view[self.view] is None:
-                word_under_cursor = (
-                    primer
-                    if word_region == primer_region
-                    else self.view.substr(word_region)
-                )
-                index_view(self.view, exclude={word_under_cursor})
+                index_view(self.view, exclude_sel=True)
             last_view = self.view
             initial_primer = primer
             matching = ldistinct(_matching())
@@ -52,11 +49,7 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
             last_index = 0
 
         for region in self.view.sel():
-            self.view.replace(
-                edit,
-                sublime.Region(self.view.word(region).a, region.end()),
-                matching[last_index]
-            )
+            self.view.replace(edit, word_start(region), matching[last_index])
 
         history[window][initial_primer] = matching[last_index]
 
@@ -70,34 +63,48 @@ class HippieListener(sublime_plugin.EventListener):
         words_by_view[view] = None  # Drop cached word set
 
 
-def index_view(view, exclude=set()):
+def index_view(view, exclude_sel=False):
     if view.size() > VIEW_TOO_BIG:
         return
-    contents = view.substr(sublime.Region(0, view.size()))
-    words = set(WORD_PATTERN.findall(contents)) - exclude
+
+    if exclude_sel:
+        regions = invert_regions(view, map(view.word, view.sel()))
+    else:
+        regions = [sublime.Region(0, view.size())]
+
+    words = set().union(*[WORD_PATTERN.findall(view.substr(region)) for region in regions])
     words_by_view[view] = words
     words_global.update(words)
 
 
-def fuzzyfind(primer, collection, sort_results=True):
+def invert_regions(view, regions):
+    # NOTE: regions should be non-overlapping and ordered,
+    #       no check here for performance reasons
+    start = 0
+    end = view.size()
+    result = []
+
+    for r in regions:
+        if r.a > start:
+            result.append(sublime.Region(start, r.a))
+        start = r.b
+
+    if start < end:
+        result.append(sublime.Region(start, end))
+
+    return result
+
+
+def fuzzyfind(primer, coll, sort_results=True):
     """
     Args:
-        primer (str): A partial string which is typically entered by a user.
-        collection (iterable): A collection of strings which will be filtered
+        primer: A partial string which is typically entered by a user.
+        coll: A collection of strings which will be filtered
                                based on the `primer`.
-        sort_results(bool): The suggestions are sorted by considering the
-                            smallest contiguous match, followed by where the
-                            match is found in the full string. If two suggestions
-                            have the same rank, they are then sorted
-                            alpha-numerically. This parameter controls the
-                            *last tie-breaker-alpha-numeric sorting*. The sorting
-                            based on match length and position will be intact.
-    Returns:
-        suggestions (generator): A generator object that produces a list of
-            suggestions narrowed down from `collection` using the `primer`.
+        sort_results: sort words after ordering by score, this drops away order from coll.
     """
     suggestions = []
-    for item in collection:
+    for item in coll:
         if score := fuzzy_score(primer.lower(), item):
             suggestions.append((score, item))
 
