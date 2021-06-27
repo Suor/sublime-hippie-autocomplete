@@ -95,23 +95,16 @@ def invert_regions(view, regions):
     return result
 
 
-def fuzzyfind(primer, coll, sort_results=True):
+def fuzzyfind(primer, coll):
     """
     Args:
         primer: A partial string which is typically entered by a user.
-        coll: A collection of strings which will be filtered
-                               based on the `primer`.
-        sort_results: sort words after ordering by score, this drops away order from coll.
+        coll: A collection of strings which will be filtered based on the `primer`.
     """
-    suggestions = []
-    for item in coll:
-        if score := fuzzy_score(primer.lower(), item):
-            suggestions.append((score, item))
+    primer_lower = primer.lower()
+    suggestions = [(score, item) for item in coll if (score := fuzzy_score(primer_lower, item))]
+    return [z[-1] for z in sorted(suggestions, key=lambda x: x[0])]
 
-    if sort_results:
-        return [z[-1] for z in sorted(suggestions)]
-    else:
-        return [z[-1] for z in sorted(suggestions, key=lambda x: x[0])]
 
 
 def fuzzy_score(primer, item):
