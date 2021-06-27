@@ -106,8 +106,14 @@ def fuzzyfind(primer, coll):
     return [z[-1] for z in sorted(suggestions, key=lambda x: x[0])]
 
 
+def fuzzy_score(primer, item, _abbr={}):
+    if item not in _abbr:
+        _abbr[item] = make_abbr(item)
+    if _abbr[item] and (abbr_score := _fuzzy_score(primer, _abbr[item])):
+        return abbr_score
+    return _fuzzy_score(primer, item)
 
-def fuzzy_score(primer, item):
+def _fuzzy_score(primer, item):
     start, pos, prev, score = -1, -1, 0, 1
     item_l = item.lower()
     for c in primer:
@@ -117,15 +123,18 @@ def fuzzy_score(primer, item):
         if start == -1:
             start = pos
 
-        # Update score if not at start of the word
-        if pos > 0:
-            pc = item[pos - 1]
-            if pc in "_-" or pc.isupper() < item[pos].isupper():
-                continue
         score += pos - prev
         prev = pos
 
     return (score, len(item))
+
+def make_abbr(item):
+    abbr = item[0]
+    for c, nc in zip(item, item[1:]):
+        if c in "_-" or c.isupper() < nc.isupper():
+            abbr += nc
+    if len(abbr) > 1:
+        return abbr
 
 
 def ldistinct(seq):
