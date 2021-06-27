@@ -59,8 +59,11 @@ class HippieListener(sublime_plugin.EventListener):
         for view in views:
             index_view(view)
 
-    def on_modified_async(self, view):
+    def on_modified(self, view):
         words_by_view[view] = None  # Drop cached word set
+
+    def on_deactivated_async(self, view):
+        index_view(view)
 
 
 def index_view(view, exclude_sel=False):
