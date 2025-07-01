@@ -1,6 +1,7 @@
 import sublime
 import sublime_plugin
 from collections import defaultdict
+from itertools import chain
 import re
 
 VIEW_TOO_BIG = 1000000
@@ -13,6 +14,7 @@ initial_primer = ""
 matching = []
 last_index = 0
 history = defaultdict(dict)  # type: Dict[sublime.Window, Dict[str, str]]
+favorites = defaultdict(int)
 
 
 class HippieWordCompletionCommand(sublime_plugin.TextCommand):
@@ -32,10 +34,12 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
             yield primer  # Always be able to cycle back
             if primer in history[window]:
                 yield history[window][primer]
-            yield from fuzzyfind(primer, words_by_view[self.view])
+            yield from fuzzyfind(primer, chain(favorites, words_by_view[self.view]))
             yield from fuzzyfind(primer, words_global)
 
         if last_view is not self.view or not matching or primer != matching[last_index]:
+            if matching:
+                favorites[matching[last_index]] += 1  # +1 fav for each use
             if words_by_view[self.view] is None:
                 index_view(self.view, exclude_sel=True)
             last_view = self.view
@@ -44,6 +48,12 @@ class HippieWordCompletionCommand(sublime_plugin.TextCommand):
             last_index = 0
 
         if matching[last_index] == primer:
+            # if we cycle through then -1 fav
+            if primer in favorites:
+                if favorites[primer] > 1:
+                    favorites[primer] -= 1
+                else:
+                    del favorites[primer]
             last_index += 1
         if last_index >= len(matching):
             last_index = 0
