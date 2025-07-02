@@ -7,6 +7,13 @@ import re
 VIEW_TOO_BIG = 1000000
 WORD_PATTERN = re.compile(r'(\w{2,})', re.S)  # Start from words of length 2
 
+# TODO: add typed in or wacthed over recently words higher than global pool.
+#       Maybe just all word from any line cursor was longer than for some time :)
+# TODO: think about mixing recency with fuzzy score somehow
+#       Maybe store some words by their abbreviations to save calculating all the scores.
+# TODO: check if global history is better than window-specific
+# TODO: explore some score threshold higher than zero
+
 words_by_view = {}
 words_global = set()
 last_view = None
