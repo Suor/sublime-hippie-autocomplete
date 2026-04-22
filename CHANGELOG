@@ -1,2 +1,12 @@
-...
-Initial version
+1.1.0
+
+- Prioritize completions previously chosen in a view.
+- Update license years.
+
+1.0.1
+
+- Fix Package Control messages.
+
+1.0.0
+
+- Initial version.

@@ -1,0 +1,3 @@
+Hippie Autocomplete 1.1.0
+
+- Prioritizes completions previously chosen in a view.
